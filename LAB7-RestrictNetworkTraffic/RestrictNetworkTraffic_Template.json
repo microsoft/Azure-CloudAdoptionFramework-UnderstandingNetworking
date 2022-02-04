@@ -1,0 +1,234 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Admin username for VM"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for VMs"
+      }
+    },
+    "numberOfInstances": {
+      "type": "int",
+      "defaultValue": 2,
+      "minValue": 1,
+      "maxValue": 5
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "defaultValue": "https://raw.githubusercontent.com/billcurtis/AzureNetEssentials1.0/development/DeploymentScripts/"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "OS": {
+      "type": "string",
+      "defaultValue": "Windows",
+      "allowedValues": [
+        "Windows"
+      ],
+      "metadata": {
+        "description": "OS Platform for the VM"
+      }
+    },
+    "vmNames": {
+      "type": "array",
+      "defaultValue": [
+        "vmPublic",
+        "vmPrivate"
+      ]
+    },
+    "NIC": {
+      "type": "array",
+      "defaultValue": [
+        "NIC1",
+        "NIC2"
+      ]
+    }
+  },
+  "variables": {
+    "vmLocation": "East US",
+    "vNetName": "vNet1",
+    "vNetAddressPrefix": "10.0.0.0/16",
+    "vNetSubnets": [
+      "10.0.0.0/24",
+      "10.0.1.0/24"
+    ],
+    "vNetSubnetNames": [
+      "Public",
+      "Private"
+    ],
+    "namingInfix": "[toLower(concat( 'net', uniqueString(resourceGroup().id), 'pip' ))]",
+    "scriptFolder": ".",
+    "scriptFileName": "ConfigureWebServers.ps1",
+    "Windows": {
+      "publisher": "MicrosoftWindowsServer",
+      "offer": "WindowsServer",
+      "sku": "2019-Datacenter",
+      "version": "latest"
+    },
+    "imageReference": "[variables(parameters('OS'))]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2017-06-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(variables('namingInfix'), 'pip', copyindex())]",
+      "location": "[variables('vmLocation')]",
+      "copy": {
+        "name": "vipLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[concat(variables('namingInfix'), 'pip', copyindex())]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('vmNames')[copyindex()],'/extensionName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('vmLocation')]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[concat(parameters('vmNames')[copyindex()])]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.8",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "[concat(parameters('_artifactsLocation'), '/', variables('ScriptFolder'), '/', variables('ScriptFileName'), parameters('_artifactsLocationSasToken'))]"
+          ],
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('scriptFolder'), '/', variables('scriptFileName'))]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('vmNames')[copyindex()],'/BGInfo')]",
+      "location": "[variables('vmLocation')]",
+      "copy": {
+        "name": "bgInfoLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[concat(parameters('vmNames')[copyindex()])]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "BGInfo",
+        "typeHandlerVersion": "2.1",
+        "settings": {},
+        "protectedSettings": null
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('vNetName')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('vmLocation')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vNetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vNetSubnetNames')[0]]",
+            "properties": {
+              "addressPrefix": "[variables('vNetSubnets')[0]]"
+            }
+          },
+          {
+            "name": "[variables('vNetSubnetNames')[1]]",
+            "properties": {
+              "addressPrefix": "[variables('vNetSubnets')[1]]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name":  "[concat(parameters('NIC')[copyindex()])]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('vmLocation')]",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[variables('vNetName')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets',variables('vNetName'),variables('vNetSubnetNames')[copyIndex()])]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat(variables('NamingInfix'), 'pip', copyindex()))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('vmNames')[copyIndex()])]",
+      "apiVersion": "2016-04-30-preview",
+      "location": "[variables('vmLocation')]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[parameters('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "nicLoop"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D2_v3"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('vmNames')[copyIndex()])]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('imageReference')]",
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('NIC', copyindex(1)))]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "2.0.0.0",
+    
+    "variables": {
+        "webAppLocations": [
+            "West US 2",
+            "Central US"
+        ],
+        "webAppPrefix": [
+            "West-",
+            "Central-"
+        ]        
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-08-01",
+            "name": "[concat('DemoAppServicePlan', copyIndex())]",
+            "type": "Microsoft.Web/serverfarms",
+            "copy": {
+                "name": "farmloop",
+                "count": "[length(variables('webAppLocations'))]"
+            },
+            "location": "[variables('webAppLocations')[copyIndex()]]",
+            "sku": {
+                "name": "S1",
+                "tier": "Standard"
+            }
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "name": "[concat(variables('WebAppPrefix')[copyIndex()], uniqueString(resourceGroup().id))]",
+            "type": "Microsoft.Web/sites",
+            "copy": {
+                "name": "siteloop",
+                "count": "[length(variables('webAppLocations'))]"
+            },
+            "location": "[variables('webAppLocations')[copyIndex()]]",
+            "dependsOn": [
+                "[concat('DemoAppServicePlan', copyIndex())]"
+            ],
+            "properties": {
+                "serverFarmId": "[concat('DemoAppServicePlan', copyIndex())]"
+            }
+        }
+    ]
+}

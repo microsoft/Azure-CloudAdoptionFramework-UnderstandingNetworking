@@ -1,5 +1,5 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     
     "variables": {
@@ -14,21 +14,30 @@
     },
     "resources": [
         {
-            "apiVersion": "2015-08-01",
+            "apiVersion": "2021-02-01",
             "name": "[concat('DemoAppServicePlan', copyIndex())]",
             "type": "Microsoft.Web/serverfarms",
+            "properties": {
+                "isSpot": false
+            },
             "copy": {
                 "name": "farmloop",
                 "count": "[length(variables('webAppLocations'))]"
             },
             "location": "[variables('webAppLocations')[copyIndex()]]",
             "sku": {
+                "capabilities":  [
+                    {"name": "",
+                    "reason": "",
+                    "value": "" }
+                ],
+                
                 "name": "S1",
                 "tier": "Standard"
             }
         },
         {
-            "apiVersion": "2015-08-01",
+            "apiVersion": "2021-02-01",
             "name": "[concat(variables('WebAppPrefix')[copyIndex()], uniqueString(resourceGroup().id))]",
             "type": "Microsoft.Web/sites",
             "copy": {

@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "adminUsername": {
-      "value": "wcurtis"
+      "value": "AzureAdmin"
     },
     "adminPassword": {
       "value": "Password123456"

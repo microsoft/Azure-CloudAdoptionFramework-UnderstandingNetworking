@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "adminUsername": {
@@ -174,7 +174,7 @@
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[concat('consolenic', copyindex(1))]",
+      "name": "[concat('nic', copyindex(1))]",
       "apiVersion": "2016-03-30",
       "location": "[variables('vmLocations')[copyIndex()]]",
       "copy": {
@@ -231,7 +231,7 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('consolenic', copyindex(1)))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('nic', copyindex(1)))]"
             }
           ]
         }

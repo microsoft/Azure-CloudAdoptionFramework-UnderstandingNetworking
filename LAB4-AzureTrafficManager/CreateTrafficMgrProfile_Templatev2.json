@@ -1,20 +1,20 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
     "contentVersion": "2.0.0.0",
-    
+
     "variables": {
         "webAppLocations": [
-            "West US 2",
-            "Central US"
+            "Brazil South",
+            "Norway East"
         ],
         "webAppPrefix": [
-            "West-",
-            "Central-"
-        ]        
+            "South-",
+            "North-"
+        ]
     },
     "resources": [
         {
-            "apiVersion": "2020-12-01",
+            "apiVersion": "2015-08-01",
             "name": "[concat('DemoAppServicePlan', copyIndex())]",
             "type": "Microsoft.Web/serverfarms",
             "copy": {
@@ -25,11 +25,10 @@
             "sku": {
                 "name": "S1",
                 "tier": "Standard"
-        
             }
         },
         {
-            "apiVersion": "2020-12-01",
+            "apiVersion": "2015-08-01",
             "name": "[concat(variables('WebAppPrefix')[copyIndex()], uniqueString(resourceGroup().id))]",
             "type": "Microsoft.Web/sites",
             "copy": {
